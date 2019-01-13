@@ -4,26 +4,18 @@
 #include "Task.h"
 #include "List.h"
 
-constexpr const char* about() {
-    return "This is a console todo list used to store different tasks.";
-}
-
-constexpr const char* errmsg() {
-    return "Type 'h' for help, 'r' for reading, 'w' <TASK_NAME> <TASK_CONTENT> for writing, 'd' for deleting the list.";
-}
-
-constexpr const char* errload() {
-    return "List is not created.";
-}
-
 int main(int argc, char *argv[]) {
-    cxxopts::Options options("yatdl", "Terminal todo list application");
+    cxxopts::Options options(argv[0], "Terminal todo list application");
+    options
+        .positional_help("[optional args]")
+        .show_positional_help();
+
     options.add_options()
         ("d,delete", "Delete list")
         ("l,load", "Load current tasks")
         ("a,add", "Add task", cxxopts::value<std::string>())
         ("r,remove", "Remove task by index", cxxopts::value<int>())
-        ("p,path", "Specify custom path to list", cxxopts::value<std::string>())
+        ("p,path", "Specify custom path to list", cxxopts::value<std::string>()->default_value("lst.obj"))
         ;
 
     auto result = options.parse(argc, argv);
@@ -31,11 +23,7 @@ int main(int argc, char *argv[]) {
     std::string path;
     List lst;
    
-    if (result.count("path")) {
-        path = result["path"].as<std::string>();
-    } else {
-        path = "lst.obj";
-    }
+    path = result["path"].as<std::string>();
 
     try {
         lst.load(path);
