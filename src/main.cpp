@@ -1,8 +1,28 @@
 #include <iostream>
-#include <string>
+#include <fstream>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/string.hpp>
 #include <cxxopts.hpp>
-#include "Task.h"
-#include "List.h"
+
+std::vector<std::string> loadList(std::string path) {
+    std::vector<std::string> result;
+    try {
+        std::ifstream ifs(path);
+        boost::archive::text_iarchive ia(ifs);
+        ia >> result;
+    } catch (boost::archive::archive_exception) {}
+    return result;
+}
+
+void saveList(std::vector<std::string> *list, std::string path) {
+    try {
+        std::ofstream ofs(path);
+        boost::archive::text_oarchive oa(ofs);
+        oa << *list;
+    } catch (boost::archive::archive_exception) {}
+}
 
 int main(int argc, char *argv[]) {
     cxxopts::Options options(argv[0], "Terminal todo list application");
@@ -21,34 +41,33 @@ int main(int argc, char *argv[]) {
     auto result = options.parse(argc, argv);
 
     std::string path;
-    List lst;
-   
+    
     path = result["path"].as<std::string>();
+    std::cout << path << std::endl;
 
-    try {
-        lst.load(path);
-    } catch (boost::archive::archive_exception &e) {}
+    auto tsks = new std::vector<std::string>(loadList(path));
 
     if (result.count("delete")) {
-        lst = List();
-        lst.save(path);
+        tsks->clear();
+        saveList(tsks, path);
     }
 
     if (result.count("remove")) {
-        lst.removeTask(result["remove"].as<int>());
+        tsks->erase(tsks->begin() + result["remove"].as<int>());
     }
 
     if (result.count("add")) {
-        lst.addTask(result["add"].as<std::string>());
+        tsks->push_back(result["add"].as<std::string>());
     }
     
     if (result.count("load")) {
-        for (int i = 0; i < lst.size(); ++i) {
-            std::cout << "Task " << i << ":\t" << lst.getTask(i).getContent() << std::endl;
+        for (unsigned long i = 0; i < tsks->size(); ++i) {
+            std::cout << "Task " << i << ":\t" << tsks->at(i) << std::endl;
         }
     }
 
-    lst.save(path);
+    saveList(tsks, path);
+    delete tsks;
 
     return 0;
 }
