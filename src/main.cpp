@@ -4,7 +4,9 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/string.hpp>
-#include <cxxopts.hpp>
+#include <boost/program_options.hpp>
+
+namespace po = boost::program_options;
 
 std::vector<std::string> loadList(std::string path) {
     std::vector<std::string> result;
@@ -24,50 +26,53 @@ void saveList(std::vector<std::string> *list, std::string path) {
     } catch (boost::archive::archive_exception) {}
 }
 
+void deleteList(std::vector<std::string> *list, std::string path) {
+    list->clear();
+    saveList(list, path);
+}
+
+void removeElement(std::vector<std::string> *list, int i) {
+    list->erase(list->begin() + i);
+}
+
+void addElement(std::vector<std::string> *list, std::string element) {
+    list->push_back(element);
+}
+
+void printList(std::vector<std::string> *list) {
+    for (size_t i = 0; i < list->size(); ++i) {
+        std::cout << "Task " << i << ":\t" << list->at(i) << std::endl;
+    }
+}
+
 int main(int argc, char *argv[]) {
-    cxxopts::Options options(argv[0], "Terminal todo list application");
-    options
-        .positional_help("[optional args]")
-        .show_positional_help();
-
-    options.add_options()
-        ("d,delete", "Delete list")
-        ("l,load", "Load current tasks")
-        ("a,add", "Add task", cxxopts::value<std::string>())
-        ("r,remove", "Remove task by index", cxxopts::value<int>())
-        ("p,path", "Specify custom path to list", cxxopts::value<std::string>()->default_value("lst.obj"))
-        ;
-
-    auto result = options.parse(argc, argv);
-
     std::string path;
-    
-    path = result["path"].as<std::string>();
-    std::cout << path << std::endl;
-
     auto tsks = new std::vector<std::string>(loadList(path));
 
-    if (result.count("delete")) {
-        tsks->clear();
-        saveList(tsks, path);
-    }
+    po::options_description desc("Allowed options");
+    desc.add_options()
+        ("help,h", "Prints help message")
+        ("load,l", "Loads list")
+        ("path,p", po::value<std::string>()->default_value("lst.obj"), "Specifies path")
+    ;
 
-    if (result.count("remove")) {
-        tsks->erase(tsks->begin() + result["remove"].as<int>());
-    }
+    try {
 
-    if (result.count("add")) {
-        tsks->push_back(result["add"].as<std::string>());
-    }
-    
-    if (result.count("load")) {
-        for (unsigned long i = 0; i < tsks->size(); ++i) {
-            std::cout << "Task " << i << ":\t" << tsks->at(i) << std::endl;
+        po::variables_map vm;
+        po::store(po::parse_command_line(argc, argv, desc), vm);
+        po::notify(vm);
+
+        if (vm.count("help")) {
+            std::cout << desc << std::endl;
+            delete tsks;
+            return 1;
         }
+
+        saveList(tsks, path);
+    } catch (po::error &e) {
+        std::cerr << "Eror: " << e.what() << std::endl << std::endl;
+        std::cerr << desc << std::endl;
     }
-
-    saveList(tsks, path);
     delete tsks;
-
     return 0;
 }
