@@ -1,30 +1,41 @@
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
+#include <boost/filesystem.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/serialization/list.hpp>
 #include <boost/serialization/string.hpp>
 #include <boost/program_options.hpp>
 
-std::list<std::string> loadList(std::string path) {
+std::list<std::string> loadList(std::string PATH) {
     std::list<std::string> result;
-    std::ifstream ifs(path);
+    std::ifstream ifs(PATH);
     boost::archive::text_iarchive ia(ifs);
     ia >> result;
     return result;
 }
 
-void saveList(std::list<std::string> list, std::string path) {
-    std::ofstream ofs(path);
+void saveList(std::list<std::string> list, std::string PATH) {
+    std::ofstream ofs(PATH);
     boost::archive::text_oarchive oa(ofs);
     oa << list;
 }
 
 int main(int argc, char *argv[]) {
     namespace po = boost::program_options;
+    namespace fs = boost::filesystem;
 
-    std::string path("lst.obj");
+    std::string const home = getenv("HOME");
+    std::string const PATH(home + "/.arjaz/yatdl/lst.obj");
+    std::string const DOT_PATH(home + "/.arjaz/");
+    std::string const DOT_APP_PATH(home + "/.arjaz/yatdl/");
+    if (!fs::exists(DOT_PATH)) {
+        fs::create_directory(DOT_PATH);
+    }
+    if (!fs::exists(DOT_APP_PATH)) {
+        fs::create_directory(DOT_APP_PATH);
+    }
 
     po::options_description desc("Allowed options");
     desc.add_options()
@@ -33,9 +44,8 @@ int main(int argc, char *argv[]) {
         ("delete,d", "Deletes list")
         ("add,a", po::value<std::string>(), "Adds task")
         ("remove,r", po::value<int>(), "Removes task")
-        ("path,p", po::value<std::string>()->default_value("lst.obj"), "Specifies path")
         ;
-    std::list<std::string> tsks;
+    std::list<std::string> tasks;
 
     try {
         po::variables_map vm;
@@ -47,43 +57,39 @@ int main(int argc, char *argv[]) {
             return 0;
         }
 
-        if (vm.count("path")) {
-            path = vm["path"].as<std::string>();
-        }
-
         if (vm.count("delete")) {
-            std::remove(path.c_str());
-            std::cout << "List at " << path << " was deleted" << std::endl;
+            std::remove(PATH.c_str());
+            std::cout << "List was deleted" << std::endl;
             return 0;
         }
 
         try {
-            tsks = loadList(path);
+            tasks = loadList(PATH);
         } catch (const boost::archive::archive_exception &e) {}
 
         if (vm.count("load")) {
-            int i = 0;
-            for (const auto &x : tsks) {
+            size_t i = 0;
+            for (const auto &x : tasks) {
                 std::cout << "Task " << i++ << ":\t" << x << std::endl;
             }
             return 0;
         }
 
         if (vm.count("add")) {
-            tsks.push_back(vm["add"].as<std::string>());
-            saveList(tsks, path);
+            tasks.push_back(vm["add"].as<std::string>());
+            saveList(tasks, PATH);
             return 0;
         }
 
         if (vm.count("remove")) {
             try {
                 size_t rm = vm["remove"].as<int>();
-                if (!(rm >= 0 && rm < tsks.size())) throw(std::out_of_range("balh"));
-                tsks.erase(next(tsks.begin(), rm));
+                if (!(rm >= 0 && rm < tasks.size())) throw(std::out_of_range("balh"));
+                tasks.erase(next(tasks.begin(), rm));
             } catch (const std::out_of_range &e) {
                 std::cerr << "Error: no task with given number found" << std::endl;
             }
-            saveList(tsks, path);
+            saveList(tasks, PATH);
             return 0;
         }
     } catch (const po::error &e) {
