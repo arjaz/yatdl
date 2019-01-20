@@ -22,20 +22,25 @@ void saveList(std::list<std::string> list, std::string PATH) {
     oa << list;
 }
 
+void checkPath(std::string const dot_path, std::string const dot_app_path) {
+    std::string const HOME = getenv("HOME");
+    if (!boost::filesystem::exists(HOME + dot_path)) {
+        boost::filesystem::create_directory(HOME + dot_path);
+    }
+    if (!boost::filesystem::exists(HOME + dot_app_path)) {
+        boost::filesystem::create_directory(HOME + dot_app_path);
+    }
+}
+
 int main(int argc, char *argv[]) {
     namespace po = boost::program_options;
     namespace fs = boost::filesystem;
 
-    std::string const home = getenv("HOME");
-    std::string const PATH(home + "/.arjaz/yatdl/lst.obj");
-    std::string const DOT_PATH(home + "/.arjaz/");
-    std::string const DOT_APP_PATH(home + "/.arjaz/yatdl/");
-    if (!fs::exists(DOT_PATH)) {
-        fs::create_directory(DOT_PATH);
-    }
-    if (!fs::exists(DOT_APP_PATH)) {
-        fs::create_directory(DOT_APP_PATH);
-    }
+    std::string const HOME = getenv("HOME");
+    std::string const PATH(HOME + "/.arjaz/yatdl/lst.obj");
+    std::string const DOT_PATH("/.arjaz/");
+    std::string const DOT_APP_PATH("/.arjaz/yatdl/");
+    checkPath(DOT_PATH, DOT_APP_PATH);
 
     po::options_description desc("Allowed options");
     desc.add_options()
